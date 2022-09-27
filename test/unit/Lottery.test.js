@@ -9,7 +9,12 @@ const { providers } = require("ethers")
 const { etherscan } = require("../../hardhat.config")
 
 describe("Lottery", () => {
-  let VRFCoordinatorV2Mock, Lottery, deployer, lotteryEntranceFee, interval
+  let VRFCoordinatorV2Mock,
+    Lottery,
+    deployer,
+    LotteryContract,
+    lotteryEntranceFee,
+    interval
   const chainId = network.config.chainId
   !developmentChains.includes(network.name)
     ? describe.skip
@@ -32,7 +37,7 @@ describe("Lottery", () => {
     })
   })
 
-  describe("EnterLotter", () => {
+  describe("EnterLottery", () => {
     it("reverts when enough money is not paid", async () => {
       await expect(Lottery.enterLottery()).to.be.reverted
     })
@@ -100,7 +105,8 @@ describe("Lottery", () => {
       await network.provider.send("evm_mine", [])
       const txResponse = await Lottery.performUpkeep([])
       const txReceipt = await txResponse.wait(1)
-      const requestId = txReceipt.events[1].args.requestId
+      const requestId = txReceipt.events[1].args.requestID
+      console.log(txReceipt.events[1].args.requestID)
       const state = await Lottery.getLotteryState()
       assert(requestId.toNumber() > 0)
       assert(state.toString() == "1")
@@ -121,19 +127,59 @@ describe("Lottery", () => {
         VRFCoordinatorV2Mock.fulfillRandomWords(1, Lottery.address) // reverts if not fulfilled
       ).to.be.revertedWith("nonexistent request")
     })
-  })
+    it("picks a winner, resets, and sends money", async () => {
+      const additionalEntrances = 3 // to test
+      const startingIndex = 2
+      const accounts = await ethers.getSigners()
+      for (
+        let i = startingIndex;
+        i < startingIndex + additionalEntrances;
+        i++
+      ) {
+        Lottery = Lottery.connect(accounts[i])
+        await Lottery.enterLottery({ value: lotteryEntranceFee })
+      }
+      const startingTimeStamp = await Lottery.getLatestTimeStamp()
 
-  it("picks the winner, resets the lottery and sends money", async () => {
-    const additionalParticipants = 3
-    const startingIndex = 1
-    const accounts = await etherscan.getSigners()
-    for (
-      let i = startingIndex;
-      i < startingIndex + additionalParticipants;
-      i++
-    ) {
-      const accountConnectedLottery = Lottery.connect(accounts[i])
-      await accountConnectedLottery.enterLottery({ value: lotteryEntranceFee })
-    }
+      await new Promise(async (resolve, reject) => {
+        Lottery.once("WinnerPicked", async () => {
+          console.log("WinnerPicked event fired!")
+
+          try {
+            const recentWinner = await Lottery.getRecentWinner()
+            const raffleState = await Lottery.getLotteryState()
+            const winnerBalance = await accounts[2].getBalance()
+            const endingTimeStamp = await Lottery.getLatestTimeStamp()
+            await expect(Lottery.getPlayers(0)).to.be.reverted
+
+            assert.equal(recentWinner.toString(), accounts[2].address)
+            assert.equal(raffleState, 0)
+            assert.equal(
+              winnerBalance.toString(),
+              startingBalance
+                .add(
+                  lotteryEntranceFee
+                    .mul(additionalEntrances)
+                    .add(lotteryEntranceFee)
+                )
+                .toString()
+            )
+            assert(endingTimeStamp > startingTimeStamp)
+            resolve()
+          } catch (e) {
+            reject(e)
+          }
+        })
+
+        const tx = await Lottery.performUpkeep([])
+
+        const txReceipt = await tx.wait(1)
+        const startingBalance = await accounts[2].getBalance()
+        await VRFCoordinatorV2Mock.fulfillRandomWords(
+          txReceipt.events[1].args.requestID,
+          Lottery.address
+        )
+      })
+    })
   })
 })

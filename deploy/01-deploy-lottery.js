@@ -1,5 +1,4 @@
 const { network, ethers } = require("hardhat")
-const { internalTask } = require("hardhat/config")
 const { developmentChains, networkConfig } = require("../helper-hardhat-config")
 const { verify } = require("../utils/verify")
 
@@ -14,7 +13,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const callbackGasLimit = networkConfig[chainId]["callbackGasLimit"]
   const interval = networkConfig[chainId]["interval"]
   let vrfCoordinatorV2Address
-
+  console.log(`Chain Id : ${chainId}`)
   if (developmentChains.includes(network.name)) {
     const vrfCoordinatorV2Mock = await ethers.getContract(
       "VRFCoordinatorV2Mock"
@@ -29,7 +28,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
       VRF_SUB_FUND_AMOUNT
     )
   } else {
-    vrfCoordinatorV2Address = [chainId]["vrfCoordinatorV2"]
+    vrfCoordinatorV2Address = networkConfig[chainId]["vrfCoordinatorV2"]
     subscriptionId = networkConfig[chainId]["subscriptionId"]
   }
 
@@ -41,6 +40,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     callbackGasLimit,
     interval,
   ]
+
   const lottery = await deploy("Lottery", {
     from: deployer,
     args: args,
