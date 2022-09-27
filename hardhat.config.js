@@ -29,6 +29,16 @@ module.exports = {
       chainId: 31337,
     },
   },
+  etherscan: {
+    apiKey: ETHER_SCAN_API,
+  },
+  gasReporter: {
+    enabled: false,
+    outputFile: "gas-report.txt",
+    currency: "USD",
+    noColors: true,
+    coinmarketcap: CMC_API,
+  },
   namedAccounts: {
     deployer: {
       default: 0,
@@ -36,5 +46,8 @@ module.exports = {
     player: {
       default: 1,
     },
+  },
+  mocha: {
+    timeout: 50000,
   },
 }
