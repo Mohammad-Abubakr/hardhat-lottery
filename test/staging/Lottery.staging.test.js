@@ -21,7 +21,7 @@ describe("Lottery", () => {
   describe("fulfillRandomWords", function () {
     it("works with live Chainlink Keepers and Chainlink VRF, we get a random winner", async function () {
       console.log("Setting up test...")
-      const startingTimeStamp = await Lottery.getLastTimeStamp()
+      const startingTimeStamp = await Lottery.getLatestTimeStamp()
       const accounts = await ethers.getSigners()
 
       console.log("Setting up Listener...")
@@ -49,7 +49,7 @@ describe("Lottery", () => {
           }
         })
 
-        console.log("Entering Raffle...")
+        console.log("Entering Lottery...")
         const tx = await Lottery.enterLottery({ value: lotteryEntranceFee })
         await tx.wait(1)
         console.log("Ok, time to wait...")
