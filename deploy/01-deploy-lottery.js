@@ -13,7 +13,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
   const callbackGasLimit = networkConfig[chainId]["callbackGasLimit"]
   const interval = networkConfig[chainId]["interval"]
   let vrfCoordinatorV2Address
-  console.log(`Chain Id : ${chainId}`)
+
   if (developmentChains.includes(network.name)) {
     const vrfCoordinatorV2Mock = await ethers.getContract(
       "VRFCoordinatorV2Mock"
